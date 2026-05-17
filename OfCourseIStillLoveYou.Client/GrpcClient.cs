@@ -19,12 +19,15 @@ namespace OfCourseIStillLoveYou.Client
 
         public static void SendCameraTextureAsync(CameraData cameraData)
         {
+            if (Client == null) return;
+            if (cameraData == null || cameraData.Texture == null) return;
+
             _ = Client.SendCameraStreamAsync(new SendCameraStreamRequest()
             {
-                CameraId = cameraData.CameraId,
-                CameraName = cameraData.CameraName,
-                Speed = cameraData.Speed,
-                Altitude = cameraData.Altitude,
+                CameraId = cameraData.CameraId ?? "",
+                CameraName = cameraData.CameraName ?? "",
+                Speed = cameraData.Speed ?? "",
+                Altitude = cameraData.Altitude ?? "",
                 Texture = Google.Protobuf.ByteString.CopyFrom(cameraData.Texture)
             });
 

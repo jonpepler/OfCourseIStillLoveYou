@@ -63,6 +63,7 @@ namespace OfCourseIStillLoveYou
         private bool _firstFrameLogged;
         private int _consecutiveEmptyJpegs;
         private int _consecutiveExceptions;
+        private int _consecutiveSendExceptions;
 
         public void SendCameraImage()
         {
@@ -106,17 +107,34 @@ namespace OfCourseIStillLoveYou
                     Texture = _jpgTexture,
                 };
 
-                Task.Run(() =>
+                // After 5 consecutive send failures (e.g. relay process not
+                // running, gRPC channel wedged), back off: only attempt 1 in
+                // every 300 frames. Throwing an exception per frame is
+                // expensive in Unity even when the catch swallows it, because
+                // the runtime still captures a stack trace.
+                if (_consecutiveSendExceptions < 5 || _consecutiveSendExceptions % 300 == 0)
                 {
-                    try
+                    Task.Run(() =>
                     {
-                        GrpcClient.SendCameraTextureAsync(payload);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.Log($"[OCISLY] cam={Id} SendCameraTextureAsync threw: {ex.GetType().Name}: {ex.Message}");
-                    }
-                });
+                        try
+                        {
+                            GrpcClient.SendCameraTextureAsync(payload);
+                            _consecutiveSendExceptions = 0;
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_consecutiveSendExceptions == 0 || _consecutiveSendExceptions % 300 == 0)
+                            {
+                                Debug.Log($"[OCISLY] cam={Id} SendCameraTextureAsync threw: {ex.GetType().Name}: {ex.Message} (backing off; will retry every ~300 frames until recovery)");
+                            }
+                            _consecutiveSendExceptions++;
+                        }
+                    });
+                }
+                else
+                {
+                    _consecutiveSendExceptions++;
+                }
             }
             catch (Exception ex)
             {
@@ -191,6 +209,14 @@ namespace OfCourseIStillLoveYou
         public string AltitudeString { get; private set; }
         public string SpeedString { get; private set; }
         public bool StreamingEnabled { get; private set; }
+
+        public void EnableStreaming()
+        {
+            if (!Enabled) return;
+            if (StreamingEnabled) return;
+            StreamingEnabled = true;
+            Debug.Log($"[OCISLY] cam={Id} auto-enabled streaming");
+        }
 
         private Camera FindCamera(string cameraName)
         {
