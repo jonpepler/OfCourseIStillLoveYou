@@ -9,6 +9,37 @@
 
 KSP mod to display hullcam cameras views on different GUI inside or outside the game using a Desktop app and Server app.
 
+> **About the `kerbcam-spike` branch.** This is an experimental branch used to
+> measure and validate per-frame performance improvements that would form the
+> case for a from-scratch successor mod (`kerbcam`). The changes here aren't
+> intended for upstream merge — they exist to record concrete measurements:
+>
+> - On a Steam Deck (Linux native KSP, OpenGL/Mesa) streaming 5 hullcams,
+>   replacing the synchronous `Texture2D.ReadPixels + EncodeToJPG` with an
+>   asynchronous GPU readback path (vendored from
+>   [yangrc1234/UnityOpenGLAsyncReadback](https://github.com/yangrc1234/UnityOpenGLAsyncReadback),
+>   MIT-licensed, see `OfCourseIStillLoveYou/Vendor/UnityOpenGLAsyncReadback/LICENSE`)
+>   recovers **~+37% mean / +88% p50 in-game framerate** in the canonical
+>   mods-streaming test scene.
+> - The sync portion of the readback (issuing the request) drops from 13-16 ms
+>   to ~0.13 ms per camera — a 100×+ reduction. The remaining ~8 ms per camera
+>   is the JPEG encode + texture upload, which is the next lever.
+> - Per-frame timing instrumentation is gated behind `/p:KerbCamBaseline=true`;
+>   default builds are byte-identical to unmodified releases.
+> - Also includes a Hullcam VDS filter integration: per-camera `cameraMode` is
+>   honoured at capture time by Blitting through the matching `CameraFilter*`
+>   material before readback. Black-and-white, night-vision, CRT-scanline, etc.
+>   look authentic in the streamed feed instead of generic colour.
+> - A small KSP-specific gotcha worth noting: the yangrc plugin's
+>   `AsyncReadbackUpdater` is supposed to auto-spawn via
+>   `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`, but KSP loads mod DLLs
+>   AFTER that hook fires, so it never runs. The patch in `TrackingCamera.cs`
+>   spawns it manually on first use — without this every readback request stays
+>   forever-pending.
+>
+> If you're an OCISLY user reading this and wondering about the changes: this
+> branch is purely an experiment, not a release candidate. Stick to `main`.
+
 ## Requirements:
 * KSP 1.12.5
 * NET 7 runtime https://dotnet.microsoft.com/en-us/download/dotnet/7.0

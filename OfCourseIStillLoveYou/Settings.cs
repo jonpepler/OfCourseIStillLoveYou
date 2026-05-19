@@ -17,6 +17,8 @@ namespace OfCourseIStillLoveYou
 
         public static int Height { get; set; }
 
+        public static bool AutoStream { get; set; }
+
         void Awake()
         {
             LoadConfig();
@@ -37,6 +39,7 @@ namespace OfCourseIStillLoveYou
                 Port = int.Parse(settings.GetValue("Port"));
                 Width = int.Parse(settings.GetValue("Width"));
                 Height = int.Parse(settings.GetValue("Height"));
+                AutoStream = bool.TryParse(settings.GetValue("AutoStream"), out var autoStream) && autoStream;
 
             }
             catch (Exception ex)

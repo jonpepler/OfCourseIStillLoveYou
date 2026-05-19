@@ -15,6 +15,54 @@ namespace OfCourseIStillLoveYou
         private void Awake()
         {
             GrpcClient.ConnectToServer(Settings.EndPoint,Settings.Port);
+
+            if (Settings.AutoStream)
+            {
+                GameEvents.onVesselChange.Add(OnVesselChange);
+                GameEvents.onVesselWasModified.Add(OnVesselChange);
+                GameEvents.onFlightReady.Add(OnFlightReady);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Settings.AutoStream)
+            {
+                GameEvents.onVesselChange.Remove(OnVesselChange);
+                GameEvents.onVesselWasModified.Remove(OnVesselChange);
+                GameEvents.onFlightReady.Remove(OnFlightReady);
+            }
+        }
+
+        private void OnFlightReady()
+        {
+            AutoStreamSweep();
+        }
+
+        private void OnVesselChange(Vessel _)
+        {
+            AutoStreamSweep();
+        }
+
+        private static void AutoStreamSweep()
+        {
+            if (!Settings.AutoStream) return;
+            if (!FlightGlobals.ready) return;
+
+            foreach (var hullCamera in GetAllTrackingCameras())
+            {
+                var instanceId = hullCamera.GetInstanceID();
+                if (TrackedCameras.TryGetValue(instanceId, out var existing))
+                {
+                    existing.EnableStreaming();
+                    continue;
+                }
+
+                var newCamera = new TrackingCamera(instanceId, hullCamera);
+                TrackedCameras.Add(instanceId, newCamera);
+                newCamera.EnableStreaming();
+                Log($"auto-streaming new camera (id={instanceId}, vessel={hullCamera.vessel?.GetDisplayName()})");
+            }
         }
 
 

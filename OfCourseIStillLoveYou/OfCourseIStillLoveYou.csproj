@@ -14,6 +14,11 @@
     <Deterministic>true</Deterministic>
     <Version Condition="'$(Version)' == ''">1.0.0.0</Version>
     <TargetFrameworkProfile />
+    <!-- Vendored Yangrc.OpenGLAsyncReadback (Vendor/UnityOpenGLAsyncReadback/)
+         uses an unsafe block to memcpy from the native plugin's buffer
+         into a managed NativeArray. Required by the plugin's API; the
+         unsafe scope is contained to that one method. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,6 +37,14 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <!-- kerbcam baseline harness: pass /p:KerbCamBaseline=true to enable
+       per-frame capture timing + KSP-side timestamp piggybacked on the
+       Altitude metadata field. Default builds (without the property) are
+       byte-identical to unmodified releases. See the kerbcam-spike branch
+       README for context. -->
+  <PropertyGroup Condition=" '$(KerbCamBaseline)' == 'true' ">
+    <DefineConstants>$(DefineConstants);KERBCAM_BASELINE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -118,6 +131,9 @@
     <Compile Include="TgpCamRotator.cs" />
     <Compile Include="Core.cs" />
     <Compile Include="Gui.cs" />
+    <Compile Include="KerbCamBaseline.cs" />
+    <Compile Include="Vendor\UnityOpenGLAsyncReadback\AsyncGPUReadbackPlugin.cs" />
+    <Compile Include="Vendor\UnityOpenGLAsyncReadback\AsyncReadbackUpdater.cs" />
     <Compile Include="TrackingCamera.cs" />
   </ItemGroup>
   <ItemGroup>
